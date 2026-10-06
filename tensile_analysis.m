@@ -50,13 +50,13 @@ showTableWindow  = true;    % one window, one tab per table
 % larger than the initial 0.1 in, so one of the two is probably a rough or
 % re-measured value - check it. Final dimensions of the plastics/carbon fiber
 % are only listed in the measurement tables; they do not change any result.
-% Steel, aluminum and CF90 were tested by other groups: ENTER THEIR VALUES.
+% Steel, aluminum, CF90 (and CF45 check): section board, M008.
 %            Key        Plot label            File                   Width (in)   Thickness (in)   Gauge length Li (in)   Final length Lf   Final width   Final thick.
 specs = { ...
-    'Steel',    'Steel',               'Steel.dat',            NaN,         NaN,             NaN,                   NaN,              NaN,          NaN
-    'Aluminum', 'Aluminum',            'Aluminum.dat',         NaN,         NaN,             NaN,                   NaN,              NaN,          NaN
+    'Steel',    'Steel',               'Steel.dat',            0.5060,      0.0615,          2.817,                 3.3875,           0.4540,       0.0600
+    'Aluminum', 'Aluminum',            'Aluminum.dat',         0.530,       0.060,           2.54,                  2.83,             0.514,        0.057
     'CF45',     'Carbon fiber 45°',    'CF45.dat',             0.5,         0.062,           6.5,                   7.25,             0.3925,       0.0210
-    'CF90',     'Carbon fiber 90°',    'CF90.dat',             NaN,         NaN,             NaN,                   NaN,              NaN,          NaN
+    'CF90',     'Carbon fiber 90°',    'CF90.dat',             0.5195,      0.0620,          6.469,                 6.5,              0.525,        0.063
     'Orange',   'Plastic (orange)',    'Plastic_Orange.dat',   0.5,         0.1,             6.5,                   6.45,             0.497,        0.134
     'White',    'Plastic (white)',     'Plastic_White.dat',    0.5,         0.1,             6.4,                   6.8,              0.486,        0.137
     'Yellow',   'Plastic (yellow)',    'Plastic_Yellow.dat',   0.5,         0.1,             6.4,                   6.5625,           0.5055,       0.1365
