@@ -30,9 +30,13 @@
 clear; clc; close all;
 
 %% ===================== USER SETTINGS =====================================
+% Folder holding the 7 .dat files (Steel.dat, Aluminum.dat, CF45.dat,
+% CF90.dat, Plastic_Orange.dat, Plastic_White.dat, Plastic_Yellow.dat).
+% Leave '' to look next to this script, in .\tensile_data, in the current
+% folder, and finally to ask with a folder dialog.
+dataFolder = '';
 scriptDir = fileparts(mfilename('fullpath'));
 if isempty(scriptDir), scriptDir = pwd; end
-dataFolder = fullfile(scriptDir, 'tensile_data');
 outFolder  = fullfile(scriptDir, 'tensile_results');
 excelFile  = fullfile(outFolder, 'tensile_results_M008_G27.xlsx');
 saveFigures      = true;    % PNG copies of every figure in outFolder
@@ -55,8 +59,8 @@ showTableWindow  = true;    % one window, one tab per table
 specs = { ...
     'Steel',    'Steel',               'Steel.dat',            0.5060,      0.0615,          2.817,                 3.3875,           0.4540,       0.0600
     'Aluminum', 'Aluminum',            'Aluminum.dat',         0.530,       0.060,           2.54,                  2.83,             0.514,        0.057
-    'CF45',     'Carbon fiber 45°',    'CF45.dat',             0.5,         0.062,           6.5,                   7.25,             0.3925,       0.0210
-    'CF90',     'Carbon fiber 90°',    'CF90.dat',             0.5195,      0.0620,          6.469,                 6.5,              0.525,        0.063
+    'CF45',     'Carbon fiber 45 deg',    'CF45.dat',             0.5,         0.062,           6.5,                   7.25,             0.3925,       0.0210
+    'CF90',     'Carbon fiber 90 deg',    'CF90.dat',             0.5195,      0.0620,          6.469,                 6.5,              0.525,        0.063
     'Orange',   'Plastic (orange)',    'Plastic_Orange.dat',   0.5,         0.1,             6.5,                   6.45,             0.497,        0.134
     'White',    'Plastic (white)',     'Plastic_White.dat',    0.5,         0.1,             6.4,                   6.8,              0.486,        0.137
     'Yellow',   'Plastic (yellow)',    'Plastic_Yellow.dat',   0.5,         0.1,             6.4,                   6.5625,           0.5055,       0.1365
@@ -109,12 +113,25 @@ lbf2N = 4.4482216152605;  in2mm = 25.4;
 if strcmpi(unitSystem, 'US')
     U.sFac = 1/6.894757293168;  U.s = "ksi";
     U.EFac = 1/6.894757293168;  U.E = "Msi";            % GPa -> Msi (1 Msi = 6.894757 GPa)
-    U.uFac = 145.0377377 ;      U.u = "in·lbf/in³";     % MJ/m^3 -> in-lbf/in^3
+    U.uFac = 145.0377377 ;      U.u = "in-lbf/in^3";     % MJ/m^3 -> in-lbf/in^3
 else
     U.sFac = 1;  U.s = "MPa";
     U.EFac = 1;  U.E = "GPa";
-    U.uFac = 1;  U.u = "MJ/m³";
+    U.uFac = 1;  U.u = "MJ/m^3";
 end
+
+%% LOCATE THE DATA
+if isempty(dataFolder)
+    cands = {fullfile(scriptDir, 'tensile_data'), scriptDir, fullfile(pwd, 'tensile_data'), pwd};
+    for k = 1:numel(cands)
+        if isfile(fullfile(cands{k}, 'Steel.dat')), dataFolder = cands{k}; break; end
+    end
+    if isempty(dataFolder)
+        dataFolder = uigetdir(pwd, 'Select the folder containing Steel.dat, Aluminum.dat, ...');
+        if isequal(dataFolder, 0), error('No data folder selected.'); end
+    end
+end
+fprintf('Reading data from %s\n', dataFolder);
 
 %% READ AND ANALYSE EVERY SPECIMEN
 if ~isfolder(outFolder), mkdir(outFolder); end
@@ -166,7 +183,7 @@ for k = 1:numel(matKeys)
     c = cPlot(sp.key);
     h = gobjects(0); lbl = strings(0);
     h(end+1) = plot(ax, R.e, R.s*U.sFac, '-', 'Color', c, 'LineWidth', 2); lbl(end+1) = "Engineering stress-strain (MTS)";
-    h(end+1) = addErrorBars(ax, R, c, opt.nErrorBars, U.sFac);                lbl(end+1) = "Error bars (±1 uncertainty)";
+    h(end+1) = addErrorBars(ax, R, c, opt.nErrorBars, U.sFac);                lbl(end+1) = "Error bars (+/-1 uncertainty)";
     hOff = plotOffset(ax, R, opt.offset, U.sFac, [0.32 0.32 0.30], '--');
     if ~isempty(hOff), h(end+1) = hOff; lbl(end+1) = "0.2 % offset line"; end
     [hp, lp] = plotPoints(ax, R, U.sFac);
@@ -275,7 +292,7 @@ h(end+1) = addErrorBars(ax, R45, col.CF45, opt.nErrorBars, U.sFac);             
 h(end+1) = plot(ax, R90.e, R90.s*U.sFac, '-', 'Color', col.CF90, 'LineWidth', 2); lbl(end+1) = S.CF90.label;
 h(end+1) = addErrorBars(ax, R90, col.CF90, opt.nErrorBars, U.sFac);             lbl(end+1) = S.CF90.label + " error bars";
 finishAxes(ax, 'Engineering strain (in/in)', sprintf('Engineering stress (%s)', U.s), ...
-    sprintf('Figure %d. Carbon fiber 45° and 90° - engineering stress-strain', figNo), h, lbl);
+    sprintf('Figure %d. Carbon fiber 45 deg and 90 deg - engineering stress-strain', figNo), h, lbl);
 saveFig(fig, outFolder, sprintf('Fig%d_CarbonFiber', figNo), saveFigures);
 
 q  = ["Ultimate stress"; "Ultimate strain"; "Rupture stress"; "Rupture strain"; "Modulus of toughness"];
@@ -286,7 +303,7 @@ v90 = [R90.us*U.sFac; R90.ue; R90.rs*U.sFac; R90.re; R90.Ut*U.uFac];
 u90 = [R90.dus*U.sFac; R90.due; R90.drs*U.sFac; R90.dre; R90.dUt*U.uFac];
 T = table(q, v45, u45, v90, u90, un, 'VariableNames', ...
     {'Quantity', 'CF45', 'CF45_uncertainty', 'CF90', 'CF90_uncertainty', 'Units'});
-tables(end+1,:) = {'CarbonFiber_Properties', 'Carbon fiber 45° and 90° - properties', T};
+tables(end+1,:) = {'CarbonFiber_Properties', 'Carbon fiber 45 deg and 90 deg - properties', T};
 
 %% 5) ALL MATERIALS
 figNo = figNo + 1;
@@ -300,7 +317,7 @@ for k = 1:numel(matKeys)
     addErrorBars(ax, sp.mts, c, opt.nErrorBars, U.sFac);
 end
 hEB = errorbar(ax, NaN, NaN, NaN, NaN, NaN, NaN, 'LineStyle', 'none', 'Color', [0.32 0.32 0.30]);
-h(end+1) = hEB; lbl(end+1) = "Error bars (±1 uncertainty)";
+h(end+1) = hEB; lbl(end+1) = "Error bars (+/-1 uncertainty)";
 finishAxes(ax, 'Engineering strain (in/in)', sprintf('Engineering stress (%s)', U.s), ...
     sprintf('Figure %d. All materials - engineering stress-strain (MTS displacement)', figNo), h, lbl);
 saveFig(fig, outFolder, sprintf('Fig%d_AllMaterials', figNo), saveFigures);
@@ -562,7 +579,7 @@ q = ["Width"; "Thickness"; "Gauge length"; "Cross-sectional area"; ...
      "Test duration"; "Data points recorded"];
 v = [m.w; m.t; m.L0; m.A; m.Lf; m.elong; m.wf; m.tf; m.Af; m.Fmax; m.dAtMax; m.dEnd; m.time; m.nPts];
 d = [m.dw; m.dt; m.dL0; m.dA; m.dLf; m.delong; m.dwf; m.dtf; m.dAf; m.dFmax; u.disp; u.disp; NaN; NaN];
-un = ["in"; "in"; "in"; "in²"; "in"; "%"; "in"; "in"; "in²"; "lbf"; "in"; "in"; "s"; "-"];
+un = ["in"; "in"; "in"; "in^2"; "in"; "%"; "in"; "in"; "in^2"; "lbf"; "in"; "in"; "s"; "-"];
 T = table(q, v, d, un, 'VariableNames', {'Measurement', 'Value', 'Uncertainty', 'Units'});
 end
 
