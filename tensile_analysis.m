@@ -44,22 +44,28 @@ showTableWindow  = true;    % one window, one tab per table
 % uncertainty. Gauge length = length used to turn MTS displacement into
 % strain. Final width/thickness (at the fracture) are optional (NaN) and
 % are only used for the true rupture stress/strain of the metals.
+% Group 27 sheet: initial Li, wi, ti and final Lf, wf, tf (inches).
+% NOTE (from the sheet): the plastics' "final" thickness (0.134-0.137 in) is
+% larger than the initial 0.1 in, so one of the two is probably a rough or
+% re-measured value - check it. Final dimensions of the plastics/carbon fiber
+% are only listed in the measurement tables; they do not change any result.
+% Steel, aluminum and CF90 were tested by other groups: ENTER THEIR VALUES.
 %            Key        Plot label            File                   Width (in)   Thickness (in)   Gauge length (in)   Final width   Final thick.
 specs = { ...
     'Steel',    'Steel',               'Steel.dat',            NaN,         NaN,             NaN,                NaN,          NaN
     'Aluminum', 'Aluminum',            'Aluminum.dat',         NaN,         NaN,             NaN,                NaN,          NaN
-    'CF45',     'Carbon fiber 45°',    'CF45.dat',             NaN,         NaN,             NaN,                NaN,          NaN
+    'CF45',     'Carbon fiber 45°',    'CF45.dat',             0.5,         0.062,           6.5,                0.3925,       0.0210
     'CF90',     'Carbon fiber 90°',    'CF90.dat',             NaN,         NaN,             NaN,                NaN,          NaN
-    'Orange',   'Plastic (orange)',    'Plastic_Orange.dat',   NaN,         NaN,             NaN,                NaN,          NaN
-    'White',    'Plastic (white)',     'Plastic_White.dat',    NaN,         NaN,             NaN,                NaN,          NaN
-    'Yellow',   'Plastic (yellow)',    'Plastic_Yellow.dat',   NaN,         NaN,             NaN,                NaN,          NaN
+    'Orange',   'Plastic (orange)',    'Plastic_Orange.dat',   0.5,         0.1,             6.5,                0.497,        0.134
+    'White',    'Plastic (white)',     'Plastic_White.dat',    0.5,         0.1,             6.4,                0.486,        0.137
+    'Yellow',   'Plastic (yellow)',    'Plastic_Yellow.dat',   0.5,         0.1,             6.4,                0.5055,       0.1365
     };
 plasticKeys    = {'Orange', 'White', 'Yellow'};   % Group 27 plastic runs
 plasticForPlot = 'Orange';                        % the ONE plastic run used for the material plot
 
 % ---- Measurement uncertainties (inches / lbf) ---------------------------
 unc.caliper   = 0.0005;   % in   width / thickness (digital caliper resolution)
-unc.gauge     = 0.01;     % in   gauge length
+unc.gauge     = 1/32;     % in   gauge length (ruler, half of a 1/16 in division)
 unc.loadRel   = 0.005;    % -    load cell, fraction of reading (0.5 %)
 unc.loadAbs   = 1.0;      % lbf  load cell, absolute floor
 unc.disp      = 0.001;    % in   MTS crosshead displacement
