@@ -42,23 +42,24 @@ showTableWindow  = true;    % one window, one tab per table
 % ENTER YOUR CALIPER MEASUREMENTS. Several readings may be given as a vector,
 % e.g. [0.501 0.499 0.500]; the mean is used and the scatter is added to the
 % uncertainty. Gauge length = length used to turn MTS displacement into
-% strain. Final width/thickness (at the fracture) are optional (NaN) and
-% are only used for the true rupture stress/strain of the metals.
+% strain (Li). Final length/width/thickness (Lf, wf, tf, measured after the
+% test) are optional (NaN): Lf gives the percent elongation, wf and tf give
+% the true rupture stress/strain of the metals.
 % Group 27 sheet: initial Li, wi, ti and final Lf, wf, tf (inches).
 % NOTE (from the sheet): the plastics' "final" thickness (0.134-0.137 in) is
 % larger than the initial 0.1 in, so one of the two is probably a rough or
 % re-measured value - check it. Final dimensions of the plastics/carbon fiber
 % are only listed in the measurement tables; they do not change any result.
 % Steel, aluminum and CF90 were tested by other groups: ENTER THEIR VALUES.
-%            Key        Plot label            File                   Width (in)   Thickness (in)   Gauge length (in)   Final width   Final thick.
+%            Key        Plot label            File                   Width (in)   Thickness (in)   Gauge length Li (in)   Final length Lf   Final width   Final thick.
 specs = { ...
-    'Steel',    'Steel',               'Steel.dat',            NaN,         NaN,             NaN,                NaN,          NaN
-    'Aluminum', 'Aluminum',            'Aluminum.dat',         NaN,         NaN,             NaN,                NaN,          NaN
-    'CF45',     'Carbon fiber 45°',    'CF45.dat',             0.5,         0.062,           6.5,                0.3925,       0.0210
-    'CF90',     'Carbon fiber 90°',    'CF90.dat',             NaN,         NaN,             NaN,                NaN,          NaN
-    'Orange',   'Plastic (orange)',    'Plastic_Orange.dat',   0.5,         0.1,             6.5,                0.497,        0.134
-    'White',    'Plastic (white)',     'Plastic_White.dat',    0.5,         0.1,             6.4,                0.486,        0.137
-    'Yellow',   'Plastic (yellow)',    'Plastic_Yellow.dat',   0.5,         0.1,             6.4,                0.5055,       0.1365
+    'Steel',    'Steel',               'Steel.dat',            NaN,         NaN,             NaN,                   NaN,              NaN,          NaN
+    'Aluminum', 'Aluminum',            'Aluminum.dat',         NaN,         NaN,             NaN,                   NaN,              NaN,          NaN
+    'CF45',     'Carbon fiber 45°',    'CF45.dat',             0.5,         0.062,           6.5,                   7.25,             0.3925,       0.0210
+    'CF90',     'Carbon fiber 90°',    'CF90.dat',             NaN,         NaN,             NaN,                   NaN,              NaN,          NaN
+    'Orange',   'Plastic (orange)',    'Plastic_Orange.dat',   0.5,         0.1,             6.5,                   6.45,             0.497,        0.134
+    'White',    'Plastic (white)',     'Plastic_White.dat',    0.5,         0.1,             6.4,                   6.8,              0.486,        0.137
+    'Yellow',   'Plastic (yellow)',    'Plastic_Yellow.dat',   0.5,         0.1,             6.4,                   6.5625,           0.5055,       0.1365
     };
 plasticKeys    = {'Orange', 'White', 'Yellow'};   % Group 27 plastic runs
 plasticForPlot = 'Orange';                        % the ONE plastic run used for the material plot
@@ -136,7 +137,7 @@ for k = 1:size(specs, 1)
     sp = struct('key', key, 'label', string(specs{k,2}), ...
         'file', fullfile(dataFolder, specs{k,3}), ...
         'w', specs{k,4}, 't', specs{k,5}, 'L0', specs{k,6}, ...
-        'wf', specs{k,7}, 'tf', specs{k,8});
+        'Lf', specs{k,7}, 'wf', specs{k,8}, 'tf', specs{k,9});
     sp.raw  = readMTS(sp.file);
     sp.meas = measurements(sp, unc, lbf2N, in2mm);
     win = [];
@@ -396,6 +397,9 @@ function m = measurements(sp, unc, lbf2N, in2mm)
 [m.L0, m.dL0] = meanUnc(sp.L0, unc.gauge);
 m.A  = m.w*m.t;                               % in^2
 m.dA = m.A*sqrt((m.dw/m.w)^2 + (m.dt/m.t)^2);
+[m.Lf, m.dLf] = meanUnc(sp.Lf, unc.gauge);
+m.elong  = 100*(m.Lf - m.L0)/m.L0;                % percent elongation
+m.delong = 100*hypot(m.dLf, m.dL0*m.Lf/m.L0)/m.L0;
 [m.wf, m.dwf] = meanUnc(sp.wf, unc.caliper);
 [m.tf, m.dtf] = meanUnc(sp.tf, unc.caliper);
 m.Af  = m.wf*m.tf;
@@ -552,12 +556,13 @@ end
 function T = measTable(m)
 u = m.unc;
 q = ["Width"; "Thickness"; "Gauge length"; "Cross-sectional area"; ...
+     "Final length Lf"; "Percent elongation (Lf - Li)/Li"; ...
      "Final width (at fracture)"; "Final thickness (at fracture)"; "Final area"; ...
      "Maximum load"; "Crosshead displacement at maximum load"; "Crosshead displacement at end of test"; ...
      "Test duration"; "Data points recorded"];
-v = [m.w; m.t; m.L0; m.A; m.wf; m.tf; m.Af; m.Fmax; m.dAtMax; m.dEnd; m.time; m.nPts];
-d = [m.dw; m.dt; m.dL0; m.dA; m.dwf; m.dtf; m.dAf; m.dFmax; u.disp; u.disp; NaN; NaN];
-un = ["in"; "in"; "in"; "in²"; "in"; "in"; "in²"; "lbf"; "in"; "in"; "s"; "-"];
+v = [m.w; m.t; m.L0; m.A; m.Lf; m.elong; m.wf; m.tf; m.Af; m.Fmax; m.dAtMax; m.dEnd; m.time; m.nPts];
+d = [m.dw; m.dt; m.dL0; m.dA; m.dLf; m.delong; m.dwf; m.dtf; m.dAf; m.dFmax; u.disp; u.disp; NaN; NaN];
+un = ["in"; "in"; "in"; "in²"; "in"; "%"; "in"; "in"; "in²"; "lbf"; "in"; "in"; "s"; "-"];
 T = table(q, v, d, un, 'VariableNames', {'Measurement', 'Value', 'Uncertainty', 'Units'});
 end
 
