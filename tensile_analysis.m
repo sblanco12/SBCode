@@ -121,15 +121,19 @@ else
 end
 
 %% LOCATE THE DATA
+% Uses dataFolder if it holds Steel.dat; otherwise searches the usual places
+% and finally asks with a folder dialog.
+cands = {dataFolder, fullfile(scriptDir, 'tensile_data'), scriptDir, ...
+         fullfile(pwd, 'tensile_data'), pwd};
+dataFolder = '';
+for k = 1:numel(cands)
+    if ~isempty(cands{k}) && isfile(fullfile(cands{k}, 'Steel.dat'))
+        dataFolder = cands{k}; break;
+    end
+end
 if isempty(dataFolder)
-    cands = {fullfile(scriptDir, 'tensile_data'), scriptDir, fullfile(pwd, 'tensile_data'), pwd};
-    for k = 1:numel(cands)
-        if isfile(fullfile(cands{k}, 'Steel.dat')), dataFolder = cands{k}; break; end
-    end
-    if isempty(dataFolder)
-        dataFolder = uigetdir(pwd, 'Select the folder containing Steel.dat, Aluminum.dat, ...');
-        if isequal(dataFolder, 0), error('No data folder selected.'); end
-    end
+    dataFolder = uigetdir(pwd, 'Select the folder containing Steel.dat, Aluminum.dat, ...');
+    if isequal(dataFolder, 0), error('No data folder selected.'); end
 end
 fprintf('Reading data from %s\n', dataFolder);
 
