@@ -112,6 +112,11 @@ useRepeatability = true; % add the repeatability of repeated readings
 repeatAgreeTol   = 0.20; % repeats differing by more than this are junk
 lengthUnc_in     = 1/32;
 
+% Shaker plot axes (Figs 1-6)
+xZoom     = 1.6;     % >1 zooms the x-axis out around the centred window
+yHeadroom = 1.3;     % y-axis top = this x the largest reading (room for legend)
+yTickStep = 2;       % y-axis tick spacing (V)
+
 % Hammer processing  [A4] [A5] [A7]
 hammerInputCol   = [];      % [] = auto-detect; or 2 / 3 (column in the file)
 modeSearch_Hz    = [5 100]; % where to look for the first bending mode
@@ -266,8 +271,13 @@ for i = 1:nL
 
     % Theoretical curve on a fine grid that also contains the exact peak
     % of R*w^2 (r = 1/sqrt(1-2 zeta^2)), so the needle-sharp peak is drawn.  [A12]
-    fLo = max(0, min(min(s.f), fnT) - 3);
-    fHi = max(max(s.f), fnT) + 3;
+    % Plot window: centred between the data and the theoretical peak, zoomed
+    % out by xZoom (half-width = xZoom * half the span + 2 Hz margin).
+    fMid  = (min(min(s.f), fnT) + max(max(s.f), fnT))/2;
+    fHalf = xZoom*(max(max(s.f), fnT) - min(min(s.f), fnT))/2 + 2;
+    fLo = max(0, fMid - fHalf);
+    fHi = fMid + fHalf;
+    yTop = yTickStep*ceil(yHeadroom*s.Vmax/yTickStep);   % zoomed-out y limit
     fT  = unique([linspace(fLo, fHi, 5000), fnT/sqrt(1 - 2*z^2)]);
     G   = scaledTheory(fT, fnT, z, s.Vmax);
 
@@ -277,6 +287,7 @@ for i = 1:nL
     hold on;
     plot(fT, G, '-', 'LineWidth', 1.2);
     hold off; grid on; xlim([fLo fHi]);
+    ylim([0 yTop]); set(gca, 'YTick', 0:yTickStep:yTop);
     xlabel('Frequency (Hz)'); ylabel('Output amplitude (V)');
     title(sprintf('Shaker test, L = %d in: amplitude vs frequency', s.L));
     legend(sprintf('Measured (%s group %s)', sectionName, shakerGroup), ...
@@ -289,6 +300,7 @@ for i = 1:nL
     hold on;
     plot(fT/fnT, G, '-', 'LineWidth', 1.2);
     hold off; grid on; xlim([fLo fHi]/fnT);
+    ylim([0 yTop]); set(gca, 'YTick', 0:yTickStep:yTop);
     xlabel('Normalized frequency f / f_n'); ylabel('Output amplitude (V)');
     title(sprintf('Shaker test, L = %d in: amplitude vs f/f_n (f_n = %.2f Hz)', s.L, fnT));
     legend(sprintf('Measured (%s group %s)', sectionName, shakerGroup), ...
