@@ -35,8 +35,14 @@ if isempty(scriptDir), scriptDir = pwd; end
 %  =====================================================================
 
 % ---------------- FILE PATHS (the only thing you should need to edit) --
-cfg.week1Data = fullfile(scriptDir, 'Fluid_dynamics_1.zip');  % zip or folder
-cfg.week2Data = fullfile(scriptDir, 'Fluid_dynamics_2.zip');  % zip or folder
+% Leave these as '' and the script finds the data itself. It searches this
+% script's folder, the current folder and your whole MATLAB Drive for a
+% .zip or folder named like "Fluid dynamics 1" / "Fluid_dynamics_1"
+% (browser copies such as "Fluid dynamics 1(1).zip" are fine).
+% Or paste a full path, e.g. '/MATLAB Drive/Fluid dynamics 1.zip'.
+cfg.week1Data = '';   % Week 1 zip or folder ('' = search automatically)
+cfg.week2Data = '';   % Week 2 zip or folder ('' = search automatically)
+cfg.searchRoots = {scriptDir, pwd, userpath, '/MATLAB Drive'};
 cfg.outDir    = fullfile(scriptDir, 'output');    % figures (.png) + tables (.csv)
 cfg.saveFigures = true;
 cfg.saveTables  = true;
@@ -201,8 +207,8 @@ cfg.col.fit   = [0.15 0.15 0.15];
 %  RUN
 %  =====================================================================
 if ~exist(cfg.outDir, 'dir'), mkdir(cfg.outDir); end
-root1 = ensureDataFolder(cfg.week1Data);
-root2 = ensureDataFolder(cfg.week2Data);
+root1 = ensureDataFolder(cfg.week1Data, 1, cfg.searchRoots);
+root2 = ensureDataFolder(cfg.week2Data, 2, cfg.searchRoots);
 
 printHeader('WEEK 1 (Procedure A) - 1) WIND TUNNEL CALIBRATION');
 cal = runCalibration(cfg, C, Unc);
@@ -1137,22 +1143,68 @@ end
 %  FILE INPUT HELPERS
 %  =====================================================================
 
-function folder = ensureDataFolder(pathOrZip)
-%ENSUREDATAFOLDER Return a folder holding the data. If a .zip is given it
-%   is extracted once into tempdir and that folder is returned.
+function folder = ensureDataFolder(pathOrZip, week, roots)
+%ENSUREDATAFOLDER Return a folder holding the data for one week.
+%   If pathOrZip is empty or does not exist, the data is searched for
+%   under roots (see locateWeekData). A .zip is extracted once into
+%   tempdir and that folder is returned.
+if isempty(pathOrZip) || ~exist(pathOrZip, 'file')     % 2 = file, 7 = folder
+    if ~isempty(pathOrZip)
+        warning('Data path not found: %s - searching for it instead.', pathOrZip);
+    end
+    pathOrZip = locateWeekData(week, roots);
+end
+fprintf('  Week %d data: %s\n', week, pathOrZip);
 if exist(pathOrZip, 'dir')
     folder = pathOrZip;
     return
 end
-[~, base, ext] = fileparts(pathOrZip);
-if strcmpi(ext, '.zip') && exist(pathOrZip, 'file')
-    folder = fullfile(tempdir, ['windtunnel_' base]);
-    if ~exist(folder, 'dir')
-        unzip(pathOrZip, folder);
-    end
-    return
+[~, base] = fileparts(pathOrZip);
+folder = fullfile(tempdir, ['windtunnel_' regexprep(base, '\W', '_')]);
+if ~exist(folder, 'dir')
+    unzip(pathOrZip, folder);
 end
-error('Data not found: %s\nEdit the FILE PATHS block in wind_tunnel_lab_M008.m.', pathOrZip);
+end
+
+function p = locateWeekData(week, roots)
+%LOCATEWEEKDATA Find a .zip or folder named like "Fluid dynamics <week>"
+%   (spaces, underscores or dashes; suffixes such as "(1)" allowed) under
+%   any of the search roots. A .zip is preferred over a folder.
+pat = sprintf('^fluid[\\s_-]*dynamics[\\s_-]*%d(\\D|$)', week);
+hits = {}; seen = {};
+for k = 1:numel(roots)
+    r = roots{k};
+    if isstring(r), r = char(r); end
+    if ~ischar(r) || isempty(r) || ~exist(r, 'dir') || any(strcmp(seen, r)), continue; end
+    seen{end+1} = r; %#ok<AGROW>
+    hits = [hits, searchNames(r, pat, 6)]; %#ok<AGROW>
+end
+if isempty(hits)
+    error(['Could not find the Week %d data (a .zip or folder named like "Fluid dynamics %d").\n' ...
+           'Upload it to your MATLAB Drive, or paste its full path into cfg.week%dData.'], week, week, week);
+end
+isZip = ~cellfun(@isempty, regexpi(hits, '\.zip$', 'once'));
+if any(isZip), hits = hits(isZip); end
+p = hits{1};
+if numel(hits) > 1
+    fprintf('  (%d candidates for Week %d data; using the first one)\n', numel(hits), week);
+end
+end
+
+function hits = searchNames(root, pat, depth)
+%SEARCHNAMES Recursively collect .zip files / folders whose name matches pat.
+hits = {};
+d = dir(root);
+for k = 1:numel(d)
+    n = d(k).name;
+    if n(1) == '.' || strcmp(n, '__MACOSX'), continue; end
+    p = fullfile(root, n);
+    if ~isempty(regexpi(n, pat, 'once')) && (d(k).isdir || ~isempty(regexpi(n, '\.zip$', 'once')))
+        hits{end+1} = p; %#ok<AGROW>
+    elseif d(k).isdir && depth > 0
+        hits = [hits, searchNames(p, pat, depth - 1)]; %#ok<AGROW>
+    end
+end
 end
 
 function file = findDataFile(root, name)
